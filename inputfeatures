@@ -1,0 +1,294 @@
+Hello Joncom,
+   In fact, about my ig.input that allows recording, i was looking for someone to test it and to give me feedback about the interface, the good, the bad. So maybe you would like to test it - if you cross your heart not to give it  away to anyone else -
+
+- finir report du touch de ig
+
+Features :
+      - Fast.
+      - No garbage creation.
+      - Allows record/replay of the keyboard/mouse.
+      - Bind one action to many key, one key to many actions.
+      - Bind touch Areas.
+      - Only public methods/properties are enumerable.
+      - almost no closure.
+      - helper for touch handling (button + vitual stick logic).
+      - can Freeze inputs for a given time (expl during scenes/game over).
+      - auto repeat.
+      - measure pressed/click/touched time (during press).      
+      - experimental : allows sound to work on safari.
+
+
+How to use it ?
+
+  1) Create an instance
+  		ga.input = new ga.Input( canvas, screenToWorldViewTransform, timeGetter) ;
+  		
+  		the canvas is the canvas used for the game.
+  		the screenToWorldViewTransform is a function(x) taking x in screen coordinates
+  		    and returning x in WorldView coordinates. 
+  		    So for instance, if you have a * 2 scale from world -> screen, the screen -> world is
+  		    0.5 scale and the function is : function(x) { return x/2 }
+  		the timeGetter is a function() returning the current game time. if not provided, Date.now() is used.
+  
+  2) Bind actions to keys.
+     The action (jump/shoot/move/...) is represented by an integer, and you find the availables
+       keys in ga.KEY.
+     A convenient way is to store the actions into ga.Input.bindings :
+
+     	var bdi  = 1; 					// binding index
+		var gab  = ga.Input.bindings ;  // action storage
+		ig.input.bind( ig.KEY.LEFT_ARROW	, ( gab.left   = bdi++) );
+		ig.input.bind( ig.KEY.RIGHT_ARROW	, ( gab.right  = bdi++) );
+		ig.input.bind( ig.KEY.X				, ( gab.thrust   = bdi++) );
+	    ig.input.bind( ig.KEY.S				, ( gab.shoot  = bdi++) );
+        ig.input.bind( ig.KEY.MOUSE1		, ( gab.shoot  		  ) );
+
+        ig.input.bindTouchRect ( gab.left, 200, 200, 50, 50) ;
+     
+		in this example, we have left/right/thrust bound, and shoot can be triggered either by
+		  S key or by mouse left button.
+		left is also bound to a touch rect.
+		See below for all binding options (measure pressed time, autorepeat).
+		  
+   3) Use the bindings in your game loop.
+		
+		var gab  = ga.Input.bindings ;  // action storage
+		
+		// did we just pressed shoot ??
+		if (ga.input.pressed(gab.shoot)) {  /* go on do the shooting */ };
+	    
+	    // are we still using our jetpack ?
+	    if (ga.input.state(gab.thrust)) {  
+	       var timeUsed = ga.input.getActionTime(ga.input.getActionTime(gab.thrust);
+	       if (timeUsed > 2000) { // if using the jetPack for too long ...
+              ...
+	         }   
+	      };
+	      
+	4) Each and every cycle, you should use resetKeys to allow the Input to refresh
+	     the status.
+	    run : function() {
+	          this.draw();
+	          ga.input.resetKeys();
+	          this.update();
+	    }
+	
+	
+Constructor
+------------
+ ga.Input :  function(targetCanvas, screenToWorldViewTransform ,timeGetter)
+
+		Constructor for the ga.Input Class.
+		targetCanvas : 
+				the canvas used for the game.
+	    screenToWorldViewTransform : 
+	    	a function(x) that transforms the screen coordinates to world view coordinates. 
+		    If you use a scale to transform your world view coordinates into
+		        screen coordinates, then use : function (x) { return x/scale };
+		    If you are scrolling and have a shift in coordinates you must handle this shift
+		         by yourself :
+		             var currentMouseX =  myWorldCamera.x + ga.input.mouse.x;
+		             var currentMouseY =  myWorldCamera.y + ga.input.mouse.y;
+		             // now (currentMouseX, currentMouseY) is in world coordinates (not world view coordinates)
+			If not provided or null, function(x) { return x }  is used.
+		timeGetter :
+			A function that returns current time in milliseconds.
+			If you are using record/replay, it is advised to use a game time measure, that
+			   you rely on to make your position update, to have consistent replays on any device.
+			If not defined Date.now is used.
+			
+Bindings
+---------
+
+bind 	:  function( key, action  , autoRepeatTime_ms) 
+
+         Binds the given key (which might be a mouse button) to the action.
+         If binding a keyboard key, all default keyboard behaviours will be prevented (expl : space to scroll).
+         If binding a mouse button, all default mouse behaviours will be prevented (expl : right click for options).         
+	     Use actions with status, pressed, released.
+         key : 
+         	is a member of ga.KEY --> see source code for the list.
+	     action :
+	         is either an integer or a string identifier for an action. 
+	         If you plan to record/replay OR measure pressed time, action has to be an integer.
+	         You cannot mix integer/string identifiers.
+	         Note that using strings within a loop creates garbage, hence slows down the game (on FF at least).
+	         One key can be bound to several actions, and one action can be bound
+	             to several keys.
+	         You can store the action inside ga.Input.bindings object.
+	     autoRepeatTime_ms :
+	     	optionnal.
+	     	The autorepeat simulates that the action is 'pressed' every xxx milliseconds. 
+	     	requires the use of integer action identifiers.
+	     	an autorepeat time is linked to an action, not to a key.
+	     	If you set several auto-repeat times for the same action, the last given
+	     	   will be used.
+		         
+bindTouch	: function()         
+	
+			Notifies that the touch events should be handled.
+			Automatically performed if a touch area is bound.
+			All default touch behaviour will be prevented.
+			Once bound you can use the touchInRect / touchVectInRect features.
+			You also have access to : 
+			       touchStartPos, touchStartTime, touchPos, touchId	
+			  All those properties are 5 length arrays corresponding to 5 possible touches. 
+			  Coordinates are in world view coordinates
+			  time is the game time when touch started ( === 0 if no touch ongoing) .
+			  the id is a unique integer identifier for the ongoing touch.
+
+bindMouse   :
+	
+			Notifies that the mouse events should be handled.
+			Automatically performed if a mouse button is bound.
+			All default mouse behaviour will be prevented.
+			Once bound you have access to mouse (mouse.x, mouse.y), in world view coordinates.
+			
+bindAccelerometer :
+
+			Notifies that the accelerometer events should be handled.
+			Once bound you have access to accel { x: , y: , z : }.
+			
+bindTouchRect	: function (action, x, y, w, h, autoRepeatTime_ms, _useStartCoord)
+bindTouchCircle : function (action, x, y, radius, autoRepeatTime_ms, _useStartCoord)
+            Binds this rectangle to the given action.
+            coordinates are world view coordinates. 
+		    Use actions with status, pressed, released.
+		    autoRepeatTime_ms :
+		      same meaning as for bind().
+		    _useStartCoord :
+		      optionnal.
+		      if set to true, the coordinates taken into account to check the status of 
+		         a touch event will be the start coordinates of the touch.
+		        
+unbind			: function (key, action) 
+			removes the bindings between this key and this action
+			
+unbindAll		: function()
+			removes all bindings.
+			any status function will return false/0
+			
+			
+// ------ Status Readers  ----------
+
+status		: function (action) 
+
+		returns wether this action is currently occuring or not.
+		returns 0 if not occuring, a positive integer if occuring.
+		this integer is 1 if time is not measured, if time is measured it is
+		  the time since his action begun, i.e. the time since the at least one
+		  key was pressed for this action.
+		throws an exception if action is unbound.
+		
+pressed		: function (action) 
+
+		returns wether this action just started during the last cycle.
+		returns true/false.
+		throws an exception if action is unbound.
+
+released	: function (action)
+
+		returns wether this action just ended during the last cycle.
+		returns true/false.
+		throws an exception if action is unbound.
+
+
+freeze		: function (freezeTime_ms)
+
+		freezes the inputs during the given time. All status will report false/0.
+		the changes in the keys / mouse positions / ... are still taken into
+		account, and reports the right status when freeze ends.
+		 		
+unFreeze	: function ()
+	
+		stops an ongoing freeze.
+		Does nothing if no freeze ongoing.
+ 
+// ------- touch helper functions ----- 
+
+touchInRect		: function (x, y, w, h) 
+touchInCircle 	: function(x,y,radius) 
+     			
+		returns wether at least one finger/stylus stands within the rect/circle.
+	    coordinates are world view coordinates. 
+	    returns an integer, 0 for the false case, and the time (ms) of the oldest
+	     touch sequence within this area for the true case.
+		Might be used for buttons / active zone if you need more flexibility than
+		fixed bindings.
+
+touchVectInRect   : function (x, y, w, h, startPoint, endPoint) 
+touchVectInCircle : function (x, y, radius, startPoint, endPoint)
+
+		returns wehter at least one touch *started* within this area.
+		startPoint/endPoint are points {x: , y:} that should be allocated prior
+		  to the call (no check performed)
+		they are filled with the start / current point of the oldest touch that
+		  started within this area.
+		the integer returned is 0 if nothing found OR the time (ms) of this sequence.
+		might be used to define a virtual stick that would start in the area, 
+		  the current - start vector can be used to compute a direction.
+
+         	
+// -------  init for Safari  --------
+
+setupUserInteractionWaitForSafari: function (safariCallBack) 
+
+		Safari and iOS have a policy not to allow sound unless the user interacted
+		  with the web site. iOS ignores a sound.src = ... when it is not issued by an 
+		  interaction event handler. 
+		Provide the callback with the sound loader to allow Safari/iOs to use standard
+		  html5 sound.
+
+// -------- Record / Replay  -------
+
+startRecording		: function (shouldRecordMouseMoves) 
+        starts a new recording session. stops any record ongoing. Does nothing if replaying.
+		the touch events are not recorded. 
+		However, the bound touch events are recorded (see bindTouchRect/Circle).
+		Does nothing if replay ongoing.
+		
+stopRecording		: function () 
+        stops an ongoing record. Does nothing if no record ongoing.
+ 
+isRecording: function () 
+		returns true or false.
+
+getRecord: function () 
+		returns the latest recorded record. You might JSON this object.
+		
+replayRecord: function (thisRecord) {        
+		replays the record given OR the latest record if no args. Stops ongoing replay or recording.
+		the bindings must be the same for replay as for the record, otherwise unexpected results
+		can follow.
+		Stops any playing or recording ongoing.
+		
+pauseOrResumeReplay: function () {
+		switches between pause and resume during a replay. 
+		
+pauseReplay		: function () 
+resumeReplay	: function () 
+stopReplay		: function () 
+isPlaying		: function () 
+isPaused		: function ()        
+        
+        functions with obvious meaning.
+        
+getPlayingDuration : function()
+
+		returns the current duration elapsed within the played record.
+
+getRecordDuration : function(record)
+		returns the duration in ms of the given record OR of the record being recorded 
+			OR of the last recorded record.
+				
+drawRecordStatus: function (ctx, color) 
+	
+		draws the current record status on the given context2D. 
+	
+// -------- Helper functions  -------	
+
+        isIOS : function() 
+        isSafari :  function() 
+		isAndroid : function()
+
+		

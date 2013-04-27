@@ -1,0 +1,42 @@
+Note to impact users :
+
+  How to use ?
+  
+  rename the existing input.js file into _input.js inside the lib/impact folder.
+  put the two file gaInput.js and Input.js inside this folder.
+  
+  ... It's done, your game should allready be faster !!
+  
+  Note that you have interest to trade the string identifiers for integer
+    identifiers, since strings creates garbage.
+    (And you need to have integers identifiers for some features.)
+    
+  The integer bindings might look like :
+  
+       // Bind keys
+		var bdi  = 0; // binding index
+		var igb  = ig.Input.bindings ;
+		ig.input.bind( ig.KEY.LEFT_ARROW,  ( igb.left   = bdi++) );
+		ig.input.bind( ig.KEY.RIGHT_ARROW, ( igb.right  = bdi++) );
+		ig.input.bind( ig.KEY.X,           ( igb.jump   = bdi++) );
+	       
+        ig.input.bind( ig.KEY._1,         ( igb.rec    = bdi++) );
+        ig.input.bind( ig.KEY._2,         ( igb.replay = bdi++) );
+        
+        ig.input.bindTouchRect            ( igb.left , 120, 300, 50, 50 );
+        
+  To use :
+			var igb  = ig.Input.bindings ;
+  	
+  			if(  ig.input.pressed(igb.jump) ) {
+  				...
+  				}
+  				
+  			var weaponChargeTime = ig.input.status (igb.chargeWeapon) ;
+  			if (weaponChargeTime > 500 && weaponChargeTime < 1000 ) {
+  			
+  			} else if (weaponChargeTime > 1000 ) {
+  			  ... shoot
+  			};
+  			
+  
